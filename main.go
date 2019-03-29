@@ -14,7 +14,9 @@ func main() {
 	co.Use(host, co.DBName, co.CollName)
 
 	r := gin.Default()
-	r.GET("/v1/movies/:movie_id", api.Get)
-
+	r.GET("/v1/movies/g/:movie_id", api.Get)
+	r.POST("/v1/movies/c", api.Create)
+	r.PUT("/v1/movies/u/:movie_id", api.Update)
+	r.PUT("/v1/movies/s", api.Upsert)
 	r.Run(":8888")
 }
