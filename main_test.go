@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"runtime/pprof"
+	"strconv"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 
 // Setup build the server for testing
 func Setup(path string, method string) *gin.Engine {
-	host := "127.0.0.1:27017"
+	host := "127.0.0.1:37017"
 	var co = api.NewConn
 	api.DBbuild("appdb", "movies")
 	co.Use(host, co.DBName, co.CollName)
@@ -42,7 +43,7 @@ func Setup(path string, method string) *gin.Engine {
 func TestGet(t *testing.T) {
 	testr := Setup("/v1/movies/g/:movie_id", "GET")
 	writer := httptest.NewRecorder()
-	request, _ := http.NewRequest("GET", "/v1/movies/g/5c9198c70876b7fd4536e44f", nil)
+	request, _ := http.NewRequest("GET", "/v1/movies/g/5ca76aaec14841c7532f4c04", nil)
 	testr.ServeHTTP(writer, request)
 	if writer.Code != 200 {
 		t.Errorf("Request code is %v", writer.Code)
@@ -70,7 +71,7 @@ func BenchmarkGet(b *testing.B) {
 
 	testr := Setup("/v1/movies/g/:movie_id", "GET")
 	writer := httptest.NewRecorder()
-	request, _ := http.NewRequest("GET", "/v1/movies/g/5c91fce8c2c289313fb3deec", nil)
+	request, _ := http.NewRequest("GET", "/v1/movies/g/5ca76aaec14841c7532f4c04", nil)
 	for i := 0; i < b.N; i++ {
 		testr.ServeHTTP(writer, request)
 	}
@@ -79,48 +80,53 @@ func BenchmarkGet(b *testing.B) {
 
 func TestPost(t *testing.T) {
 
-	var movie = models.Movie{
-		ID:        bson.NewObjectId(),
-		Name:      "testMovie",
-		Year:      "2019",
-		Directors: []string{"abc bcd"},
-		Writers:   []string{"xyz", "uvw"},
-	}
+	//var movie = models.Movie{
+	//	ID:        bson.NewObjectId(),
+	//	Name:      "testMovie",
+	//	Year:      "2019",
+	//	Directors: []string{"abc bcd"},
+	//	Writers:   []string{"xyz", "uvw"},
+	//}
+	movie := getRandMovie()
 	testJSON, _ := json.Marshal(movie)
 	testMovie := bytes.NewBuffer([]byte(testJSON))
 
 	testr := Setup("/v1/movies/c", "POST")
 	writer := httptest.NewRecorder()
 	request, _ := http.NewRequest("POST", "/v1/movies/c", testMovie)
-	request.Header.Set("Content-type", "application/json")
+	request.Header.Add("Content-type", "application/json")
+
 	testr.ServeHTTP(writer, request)
 }
 
-func BenchmarkPost(b *testing.B) {
-	var movie = models.Movie{
-		ID:        bson.NewObjectId(),
-		Name:      "testMovie",
-		Year:      "2019",
-		Directors: []string{"abc bcd"},
-		Writers:   []string{"xyz", "uvw"},
-	}
-	testJSON, _ := json.Marshal(movie)
-	testMovie := bytes.NewBuffer([]byte(testJSON))
+func BenchmarkPost1(b *testing.B) {
+	host := "127.0.0.1:37017"
+	var co = api.NewConn
+	api.DBbuild("appdb", "movies")
+	co.Use(host, co.DBName, co.CollName)
 
-	testr := Setup("/v1/movies/c", "POST")
-	writer := httptest.NewRecorder()
-	request, _ := http.NewRequest("POST", "/v1/movies/c", testMovie)
-	request.Header.Set("Content-type", "application/json")
+	r := gin.Default()
+	r.POST("/v1/movies/c", api.Create)
+
 	for i := 0; i < b.N; i++ {
-		testr.ServeHTTP(writer, request)
+		movie := getRandMovie()
+		testJSON, _ := json.Marshal(movie)
+		testMovie := bytes.NewBuffer([]byte(testJSON))
+		//testr := Setup("/v1/movies/c", "POST")
+		writer := httptest.NewRecorder()
+		request, _ := http.NewRequest("POST", "/v1/movies/c", testMovie)
+		request.Header.Add("Content-type", "application/json")
+
+		r.ServeHTTP(writer, request)
 	}
+
 }
 
 func getRandMovie() models.Movie {
 	movie := models.Movie{
 		ID:        bson.NewObjectId(),
-		Name:      getRandomString(rand.Intn(20), "STR"),
-		Year:      getRandomString(4, "NUM"),
+		Name:      getRandomString(rand.Intn(12), "STR"),
+		Year:      getRandomYear(), //getRandomString(4, "NUM"),
 		Directors: []string{getRandomString(rand.Intn(10), "STR")},
 		Writers:   []string{getRandomString(rand.Intn(10), "STR"), getRandomString(rand.Intn(10), "STR")},
 	}
@@ -128,14 +134,14 @@ func getRandMovie() models.Movie {
 }
 
 func getRandomString(l int, opt string) string {
-	str := "abcdefghijklmnopqrstuvwxyz"
-	num := "0123456789"
+	str := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	//num := "0123456789"
 	var bytes []byte
 	switch opt {
 	case "STR":
 		bytes = []byte(str)
-	case "NUM":
-		bytes = []byte(num)
+	//case "NUM":
+	//	bytes = []byte(num)
 	default:
 		log.Fatalln("error option")
 	}
@@ -146,4 +152,10 @@ func getRandomString(l int, opt string) string {
 		result = append(result, bytes[r.Intn(len(bytes))])
 	}
 	return string(result)
+}
+
+func getRandomYear() string {
+	rand.Seed(time.Now().Unix())
+	year := rand.Int63n(2019-1888) + 1888
+	return strconv.Itoa(int(year))
 }

@@ -18,6 +18,9 @@ type DBconn struct {
 	CollName   string
 }
 
+// Host DB url
+const Host = "127.0.0.1:37017"
+
 // Use database
 func (conn *DBconn) Use(host, dbName, collName string) {
 	session, err := mgo.Dial(host)
@@ -60,12 +63,25 @@ func (conn *DBconn) GetByID(id string) (models.Movie, error) {
 	cc := c.DB(conn.DBName).C(conn.CollName)
 	var movie models.Movie
 	err := cc.FindId(bson.ObjectIdHex(id)).One(&movie)
-
 	if err != nil {
 		log.Println(err.Error())
 		return movie, err
 	}
 	return movie, nil
+}
+
+// GetByYear get all or ns items by year
+func (conn *DBconn) GetByYear(year string) ([]models.Movie, error) {
+	var movies []models.Movie
+	c := conn.Session.Copy()
+	defer c.Close()
+	cc := c.DB(conn.DBName).C(conn.CollName)
+	err := cc.Find(bson.M{"year": year}).All(&movies)
+	if err != nil {
+		log.Println(err.Error())
+		return movies, err
+	}
+	return movies, nil
 }
 
 // PostStruct post new data

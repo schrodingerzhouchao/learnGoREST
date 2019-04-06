@@ -33,9 +33,11 @@ var TestMovieupdate = models.Movie{
 	Writers:   []string{"Frank Darabont", "Stephen Edwin King"},
 }
 
+const host = "127.0.0.1:37017"
+
 // TestUse test the connection
 func TestUse(t *testing.T) {
-	host := "127.0.0.1:27017"
+	//host := "127.0.0.1:37017"
 	//dbName := "appdb"
 	//collName := "movies"
 
@@ -53,7 +55,7 @@ func TestGetDBAndCollName(t *testing.T) {
 
 // TestGet test the Get method
 func TestGet(t *testing.T) {
-	id := "5c9198c70876b7fd4536e44f"
+	id := "5ca76aaec14841c7532f4c04"
 	movie, err := conn.GetByID(id)
 	if err != nil {
 		t.Fatal("Get movie failed:", err)
@@ -62,6 +64,17 @@ func TestGet(t *testing.T) {
 		t.Fatal("Get wrong name")
 	}
 	fmt.Println(movie)
+}
+
+func TestGetByYear(t *testing.T) {
+	year := "2009"
+	conn.Use(host, conn.DBName, conn.CollName)
+	movies, err := conn.GetByYear(year)
+	if err != nil {
+		t.Fatal("Get movie failed:", err)
+	}
+
+	fmt.Println(movies)
 }
 
 // TestPost test the PostStruct method
@@ -82,7 +95,7 @@ func TestDeleteByID(t *testing.T) {
 // TestUpdate test the Update method
 /*
 func TestUpdate(t *testing.T) {
-	id := "5c9ae01dc2c2890b8de24835"
+	id := "5ca76aaec14841c7532f4c04"
 	err := conn.UpdateStruct(id, TestMovieupdate)
 	if err != nil {
 		t.Fatal("Update movie failed:", err)
@@ -100,7 +113,7 @@ func TestUpsert(t *testing.T) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	id := "5c9198c70876b7fd4536e44f"
+	id := "5ca76aaec14841c7532f4c04"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		movie, err := conn.GetByID(id)
